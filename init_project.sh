@@ -71,6 +71,7 @@ files=(
     "docs/postgres_schema.md"
     "docs/insights_report_template.md"
 
+    "scripts/__init__.py"
     "scripts/scrape_reviews.py"
     "scripts/clean_reviews.py"
     "scripts/run_sentiment.py"
@@ -121,6 +122,7 @@ files=(
     "tests/integration/test_nlp_pipeline.py"
 
     "requirements.txt"
+    "requirements-dev.txt"
     "pyproject.toml"
     "README.md"
     ".gitignore"
