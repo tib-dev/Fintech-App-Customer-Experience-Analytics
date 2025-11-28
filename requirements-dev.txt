@@ -1,0 +1,17 @@
+-r requirements.txt
+
+# Testing
+pytest>=8.0.0
+pytest-cov>=4.1.0
+pytest-asyncio>=0.21.0
+
+# Linting & formatting
+black>=24.1.0
+ruff>=0.2.0
+isort>=5.13.2
+mypy>=1.8.0
+pre-commit>=3.4.0
+
+# Notebook / dev tools
+ipython>=8.15.0
+notebook>=7.0.0
