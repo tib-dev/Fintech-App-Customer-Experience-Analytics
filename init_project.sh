@@ -1,32 +1,48 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
-echo "Initializing Fintech Review Analytics project structure..."
+echo ""
+echo "---------------------------------------------"
+echo "  Initializing Fintech Review Analytics"
+echo "---------------------------------------------"
+echo ""
 
-# -------------------------
+GREEN="\e[32m"
+YELLOW="\e[33m"
+CYAN="\e[36m"
+RESET="\e[0m"
+
+created_dirs=()
+created_files=()
+
+# ----------------------------------------
 # Helpers
-# -------------------------
+# ----------------------------------------
 ensure_dir () {
     if [ ! -d "$1" ]; then
-        echo "Creating directory: $1"
         mkdir -p "$1"
+        touch "$1/.gitkeep"
+        created_dirs+=("$1")
+        echo -e "${GREEN}Created directory:${RESET} $1"
     else
-        echo "Directory exists: $1"
+        echo -e "${CYAN}Directory exists:${RESET} $1"
     fi
 }
 
 ensure_file () {
     if [ ! -f "$1" ]; then
-        echo "Creating file: $1"
+        mkdir -p "$(dirname "$1")"
         touch "$1"
+        created_files+=("$1")
+        echo -e "${GREEN}Created file:${RESET} $1"
     else
-        echo "File exists: $1"
+        echo -e "${CYAN}File exists:${RESET} $1"
     fi
 }
 
-# -------------------------
+# ----------------------------------------
 # DIRECTORIES
-# -------------------------
+# ----------------------------------------
 dirs=(
     ".github/workflows"
     "configs"
@@ -54,9 +70,9 @@ for d in "${dirs[@]}"; do
     ensure_dir "$d"
 done
 
-# -------------------------
+# ----------------------------------------
 # FILES
-# -------------------------
+# ----------------------------------------
 files=(
     ".github/workflows/ci.yml"
     ".github/workflows/codeql.yml"
@@ -132,4 +148,32 @@ for f in "${files[@]}"; do
     ensure_file "$f"
 done
 
-echo "Project structure for Fintech Review Analytics initialized successfully."
+echo ""
+echo -e "${GREEN}Project structure for Fintech Review Analytics initialized successfully.${RESET}"
+echo ""
+
+# Summary
+echo "---------------------------------------------"
+echo -e "${YELLOW}Summary${RESET}"
+echo "---------------------------------------------"
+echo "Directories created: ${#created_dirs[@]}"
+echo "Files created: ${#created_files[@]}"
+
+if (( ${#created_dirs[@]} > 0 )); then
+    echo ""
+    echo "New directories:"
+    for d in "${created_dirs[@]}"; do
+        echo " - $d"
+    done
+fi
+
+if (( ${#created_files[@]} > 0 )); then
+    echo ""
+    echo "New files:"
+    for f in "${created_files[@]}"; do
+        echo " - $f"
+    done
+fi
+
+echo ""
+echo -e "${GREEN}All done.${RESET}"
