@@ -140,7 +140,7 @@ Fintech-App-Review-Analytics/
 ├── pyproject.toml
 ├── README.md
 └── .gitignore
-
+```
 
 ## Setup & Installation
 
