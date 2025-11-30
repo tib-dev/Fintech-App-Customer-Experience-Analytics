@@ -1,18 +1,28 @@
+# src/fintech_app_reviews/utils/text_utils.py (Ensuring lowercasing is first)
+
 import re
-import logging
+from typing import Any
+import pandas as pd
 
-logger = logging.getLogger(__name__)
+def clean_text(text: Any) -> str:
+    """Performs basic text cleaning: lowercasing, removing noise, and stripping whitespace."""
 
-
-def clean_text(text: str) -> str:
-    try:
-        if not isinstance(text, str):
+    # 1. Handle non-string inputs (e.g., NaN from Pandas, which should be treated as empty)
+    if not isinstance(text, str):
+        # Explicitly convert to string if it's not None/NaN, otherwise return empty string
+        # However, for cleaning, we often just want a string representation.
+        # But if it's NaN/None, we MUST return "" to prevent failure in downstream code.
+        if pd.isna(text):  # Assuming pandas is available for robustness against NaN
             return ""
+        text = str(text)
 
-        text = re.sub(r"\s+", " ", text)
-        text = text.replace("\n", " ").strip()
-        return text
+    # 2. Convert to lowercase (This is the line that failed in your test)
+    text = text.lower()
 
-    except Exception as e:
-        logger.error(f"Text clean error: {e}", exc_info=True)
-        return ""
+    # 3. Remove HTML tags, links, and mentions
+    text = re.sub(r'<[^<]+?>|https?://\S+|www\.\S+|@\w+|#\w+', '', text)
+
+    # 4. Remove excessive whitespace and strip leading/trailing spaces
+    text = re.sub(r'\s+', ' ', text).strip()
+
+    return text
