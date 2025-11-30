@@ -1,0 +1,71 @@
+# =========================================
+# PostgreSQL + Storage Configuration
+# Fintech Review Analytics
+# =========================================
+
+postgres:
+  host: "localhost"
+  port: 5432
+  database: "fintech_reviews"
+  user: "postgres"
+  password: "postgres"
+  schema: "public"
+
+  # Connection pool
+  pool_min: 5
+  pool_max: 20
+  connection_timeout: 5
+
+
+# -----------------------------------------
+# TABLE CONFIGURATION
+# -----------------------------------------
+tables:
+  reviews: "reviews"
+  sentiments: "sentiment_scores"
+  keywords: "keywords"
+  themes: "themes"
+  load_logs: "etl_logs"
+
+  # Required columns for validation
+  review_required_fields:
+    - "review_id"
+    - "user_name"
+    - "rating"
+    - "timestamp"
+    - "review_text"
+
+  sentiment_required_fields:
+    - "review_id"
+    - "sentiment_score"
+
+
+# -----------------------------------------
+# IMPORT SETTINGS
+# -----------------------------------------
+import:
+  chunk_size: 5000
+  upsert: true
+  conflict_key: "review_id"
+
+  # CSV export/import for fast loads
+  temp_export_path: "data/postgres_exports"
+
+
+# -----------------------------------------
+# ERROR HANDLING / RETRY
+# -----------------------------------------
+error_handling:
+  retries: 3
+  retry_backoff_sec: 2
+  log_failed_rows: true
+  failed_rows_path: "data/interim/failed_rows.csv"
+
+
+# -----------------------------------------
+# LOGGING
+# -----------------------------------------
+logging:
+  level: "INFO"
+  log_to_file: true
+  logfile: "logs/db_loader.log"
