@@ -12,7 +12,7 @@ scraper:
     - "com.dashen.dashensuperapp"
 
   # Number of reviews to fetch per run
-  max_reviews: 6000
+  max_reviews: 600
 
   # Sorting method used by Google Play scraper
   sort_by: "newest" # newest | rating | helpfulness
@@ -85,3 +85,10 @@ bank_mapping:
   com.combanketh.mobilebanking: "Commercial Bank of Ethiopia (CBE)"
   com.boa.boaMobileBanking: "Bank of Abyssinia (BOA)"
   com.dashen.dashensuperapp: "Dashen Bank"
+
+# --------------------------------
+# CONTEXT SETTINGS
+# --------------------------------
+context:
+  language_code: "en"
+  country_code: "et"

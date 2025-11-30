@@ -39,7 +39,9 @@ dependencies = [
     "reportlab",
 
     # Utilities
-    "python-dotenv"
+    "python-dotenv",
+    # Language detetection
+    "langdetect"
 ]
 
 [tool.setuptools.packages.find]

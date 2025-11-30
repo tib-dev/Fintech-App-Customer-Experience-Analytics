@@ -26,3 +26,6 @@ reportlab
 
 # Utilities
 python-dotenv
+
+# Language detection
+langdetect
