@@ -1,0 +1,87 @@
+# ================================
+# Scraper Configuration
+# Fintech Review Analytics
+# ================================
+
+scraper:
+  platform: "google_play" # google_play | app_store | custom
+
+  app_ids:
+    - "com.combanketh.mobilebanking"
+    - "com.boa.boaMobileBanking"
+    - "com.dashen.dashensuperapp"
+
+  # Number of reviews to fetch per run
+  max_reviews: 6000
+
+  # Sorting method used by Google Play scraper
+  sort_by: "newest" # newest | rating | helpfulness
+
+  # Pagination and batching
+  batch_size: 200
+  max_pages: 50
+
+  # Parallel scraping
+  concurrency: 4
+
+# --------------------------------
+# NETWORK SETTINGS
+# --------------------------------
+network:
+  timeout: 10
+  retries: 3
+  retry_backoff_sec: 2
+
+  user_agent:
+    type: "random" # fixed | random
+    fixed_value: "Mozilla/5.0 (X11; Linux x86_64)"
+
+  proxies:
+    enabled: false
+    list: []
+
+# --------------------------------
+# OUTPUT SETTINGS
+# --------------------------------
+output:
+  save_raw: true
+  raw_path: "data/raw"
+
+  save_interim: true
+  interim_path: "data/interim"
+
+  export_csv: true
+  csv_path: "data/processed/reviews.csv"
+
+  log_scrape_stats: true
+
+# --------------------------------
+# LOGGING SETTINGS
+# --------------------------------
+logging:
+  level: "INFO" # DEBUG | INFO | WARNING | ERROR | CRITICAL
+  log_to_file: true
+  logfile: "logs/scraper.log"
+  rotate_logs: true
+  max_log_size_mb: 5
+  keep_logs: 7
+
+# --------------------------------
+# VALIDATION RULES
+# --------------------------------
+validation:
+  enforce_schema: true
+  fields_required:
+    - "review_id"
+    - "user_name"
+    - "rating"
+    - "review_text"
+    - "timestamp"
+
+# --------------------------------
+# BUSINESS MAPPING
+# --------------------------------
+bank_mapping:
+  com.combanketh.mobilebanking: "Commercial Bank of Ethiopia (CBE)"
+  com.boa.boaMobileBanking: "Bank of Abyssinia (BOA)"
+  com.dashen.dashensuperapp: "Dashen Bank"
