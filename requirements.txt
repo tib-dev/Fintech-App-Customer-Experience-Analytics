@@ -16,7 +16,7 @@ alembic
 nltk
 spacy
 transformers
-sklearn
+scikit-learn
 torch
 hf_xet
 
