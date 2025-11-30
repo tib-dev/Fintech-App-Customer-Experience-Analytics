@@ -17,8 +17,8 @@ dependencies = [
     # Core
     "numpy",
     "pandas",
-    "pyyaml~=6.0.1",
-    "python-dateutil~=2.8.2",
+    "pyyaml",
+    "python-dateutil",
 
     # Scraping
     "google-play-scraper",
