@@ -36,84 +36,54 @@ except Exception as e:
 CONTEXT = CONFIG.get('context', {})
 
 
-def scrape_app_reviews(
-    app_id: str,
-    app_id_to_bank: Dict[str, str],
-    max_reviews: int,
-    sort_by: str,
-    timeout: int
-) -> List[Dict[str, Any]]:
-    """
-    Scrapes reviews for a single app ID from Google Play,
-    handling pagination and standardizing the output format.
-    """
-
+def scrape_app_reviews(app_id: str, app_id_to_bank: dict, max_reviews: int, sort_by: str):
     bank_name = app_id_to_bank.get(app_id, "Unknown Bank")
     logger.info(
         f"Scraping reviews for {bank_name} ({app_id}). Max reviews: {max_reviews}")
 
-    all_reviews: List[Dict[str, Any]] = []
-    continuation_token: Optional[str] = None
-
-    # Resolve sorting method
+    all_reviews = []
     sort_enum = getattr(Sort, sort_by.upper(), Sort.NEWEST)
+    lang = CONTEXT.get("language_code", "en")
+    country = CONTEXT.get("country_code", "et")
 
-    # Get country and language codes from context
-    lang = CONTEXT.get('language_code', 'en')
-    #  FIX: Corrected CONSET to CONTEXT
-    country = CONTEXT.get('country_code', 'et')
+    continuation_token = None
+    batch_size = CONFIG.get("scraper", {}).get("batch_size", 200)
+    remaining = max_reviews
 
-    batch_size = CONFIG.get('scraper', {}).get('batch_size', 200)
-
-    while len(all_reviews) < max_reviews:
-
-        count_needed = min(batch_size, max_reviews - len(all_reviews))
-
-        if count_needed <= 0:
-            break
-
+    while remaining > 0:
+        count = min(batch_size, remaining)
         try:
             result, continuation_token = reviews(
                 app_id,
                 lang=lang,
                 country=country,
                 sort=sort_enum,
-                count=count_needed,
-                cont=continuation_token,
-                timeout=timeout
+                count=count,
+                continuation_token=continuation_token  # pass the token from previous batch
             )
-
             if not result:
-                logger.info(f"No more reviews found for {app_id}.")
                 break
 
-            for review in result:
-                standardized_review = {
-                    'review_id': review.get('reviewId'),
-                    'review_text': review.get('content'),
-                    'rating': review.get('score'),
-                    'review_date': review.get('at').isoformat() if review.get('at') else None,
-                    'user_name': review.get('userName'),
-                    'thumbs_up_count': review.get('thumbsUpCount'),
-                    'bank': bank_name,
-                    'app_id': app_id,
-                    'source': CONFIG.get('scraper', {}).get('platform', 'google_play')
-                }
-                all_reviews.append(standardized_review)
+            for r in result:
+                all_reviews.append({
+                    "review_id": r.get("reviewId"),
+                    "review_text": r.get("content"),
+                    "rating": r.get("score"),
+                    "review_date": r.get("at").isoformat() if r.get("at") else None,
+                    "user_name": r.get("userName"),
+                    "thumbs_up_count": r.get("thumbsUpCount"),
+                    "bank": bank_name,
+                    "app_id": app_id,
+                    "source": CONFIG.get("scraper", {}).get("platform", "google_play")
+                })
 
-            logger.debug(
-                f"Collected {len(result)} reviews. Total collected: {len(all_reviews)}")
-
-            if continuation_token is None:
-                logger.info(
-                    f"Reached the end of available reviews for {app_id}.")
+            remaining -= len(result)
+            if continuation_token is None:  # reached the end
                 break
-
         except Exception as e:
-            logger.error(
-                f"Error scraping {app_id} (Batch): {e}", exc_info=False)
+            logger.error(f"Error scraping {app_id}: {e}", exc_info=True)
             break
 
     logger.info(
-        f"Finished scraping {bank_name}. Total reviews collected: {len(all_reviews)}.")
+        f"Finished scraping {bank_name}. Total reviews collected: {len(all_reviews)}")
     return all_reviews

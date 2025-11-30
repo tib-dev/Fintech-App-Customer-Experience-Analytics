@@ -1,6 +1,6 @@
 # =========================================
 # NLP Pipeline Configuration
-# Fintech Review Analytics
+# Fintech Review Analytics - Task 2
 # =========================================
 
 nlp:
@@ -21,13 +21,13 @@ nlp:
   # Stopwords
   stopwords:
     enabled: true
-    custom: []             # Add project-specific stopwords
+    custom: []             # Add project-specific stopwords if needed
 
   # Lemmatization / Stemming
   lemmatize: true
   stem: false              # Enable only if doing keyword clustering
 
-  # Sentence splitting
+  # Sentence splitting (for transformer sentiment or contextual keyword extraction)
   sentence_tokenize: true
 
 
@@ -36,11 +36,12 @@ nlp:
 # -----------------------------------------
 sentiment:
   enabled: true
-  engine: "vader"          # vader | textblob | transformer
-  transformer_model: "cardiffnlp/twitter-roberta-base-sentiment"
-
-  # Optional smoothing for noisy review sentiment
-  rolling_window: 3
+  engine: "vader"           # | transformer
+  transformer_model: "distilbert-base-uncased-finetuned-sst-2-english" # recommended for reviews
+  batch_size: 16                  # For transformer inference
+  device: "cpu"                   # "cuda" if GPU available
+  rolling_window: 3               # Optional smoothing for noisy reviews
+  aggregate_by: ["bank", "rating"] # For summarization
 
 
 # -----------------------------------------
@@ -48,12 +49,12 @@ sentiment:
 # -----------------------------------------
 keywords:
   enabled: true
-  method: "rake"           # rake | yake | keybert
-
-  keybert:
-    model: "all-mpnet-base-v2"
-    top_k: 10
-    use_mmr: true
+  method: "tfidf"                 # Options: tfidf | rake | yake | keybert
+  tfidf:
+    top_n: 50                     # Number of keywords per group (e.g., per bank)
+    ngram_range: [1,2]            # Unigrams + bigrams
+    min_df: 2                     # Ignore very rare terms
+    max_df: 0.9                   
 
   rake:
     min_len: 1
@@ -64,13 +65,30 @@ keywords:
     deduplication_threshold: 0.1
     top_k: 15
 
+  keybert:
+    model: "all-mpnet-base-v2"
+    top_k: 10
+    use_mmr: true
+
 
 # -----------------------------------------
 # THEME EXTRACTION
 # -----------------------------------------
 themes:
   enabled: true
-  method: "lda"            # lda | hdbscan | kmeans | nmf
+  method: "manual"               # Options: manual | lda | kmeans | nmf | hdbscan
+  # For manual rule-based clustering (recommended for fintech reviews)
+  rules:
+    - name: "Account Access Issues"
+      keywords: ["login", "password", "otp", "pin", "access"]
+    - name: "Transaction Performance"
+      keywords: ["slow", "transfer", "payment", "processing", "timeout", "failed"]
+    - name: "User Interface & Experience"
+      keywords: ["ui", "layout", "design", "navigation", "experience", "ux"]
+    - name: "Customer Support"
+      keywords: ["support", "help", "call", "service", "response"]
+    - name: "Feature Requests"
+      keywords: ["feature", "add", "improve", "fingerprint", "budget", "notification"]
 
   lda:
     num_topics: 8
@@ -80,11 +98,11 @@ themes:
     clusters: 10
     max_iter: 300
 
-  hdbscan:
-    min_cluster_size: 20
-
   nmf:
     components: 6
+
+  hdbscan:
+    min_cluster_size: 20
 
 
 # -----------------------------------------
@@ -98,3 +116,5 @@ output:
 
   clean_text_path: "data/interim/cleaned_reviews.csv"
   enriched_output_path: "data/processed/nlp_enriched_reviews.csv"
+  sentiment_path: "../data/processed/reviews_with_sentiment.csv"
+  themes_path: "data/processed/reviews_with_themes.csv"

@@ -3,7 +3,7 @@ import logging
 import pandas as pd
 import numpy as np
 # Assuming utils is correct
-from src.fintech_app_reviews.utils.text_utils import clean_text
+from fintech_app_reviews.utils.text_utils import clean_text
 
 logger = logging.getLogger(__name__)
 
@@ -24,9 +24,9 @@ def clean_reviews(df: pd.DataFrame) -> pd.DataFrame:
         # 0. Standardize Column Names: Map common scraper output names to final required names.
         # This handles cases where raw data uses 'content' or 'score'
         rename_map = {
-            'content': 'review',  # common scraper output for text
-            'score': 'rating',    # common scraper output for score
-        }
+          'review_text': 'review',  # <- match your scraper output
+          'score': 'rating',        # already optional fallback
+         }
         df.rename(columns=rename_map, inplace=True)
 
         # Ensure the required columns for filtering are present. If not, cleaning can't proceed.

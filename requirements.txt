@@ -15,7 +15,10 @@ alembic
 # NLP / Sentiment
 nltk
 spacy
-
+transformers
+scikit-learn
+torch
+hf_xet
 
 
 # Visualization / reporting
@@ -26,3 +29,6 @@ reportlab
 
 # Utilities
 python-dotenv
+
+# Language detection
+langdetect
