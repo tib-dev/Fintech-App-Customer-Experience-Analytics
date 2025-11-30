@@ -15,7 +15,10 @@ alembic
 # NLP / Sentiment
 nltk
 spacy
-
+transformers
+sklearn
+torch
+hf_xet
 
 
 # Visualization / reporting
