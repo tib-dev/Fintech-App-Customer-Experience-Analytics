@@ -6,12 +6,14 @@ from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import SQLAlchemyError
 from urllib.parse import quote_plus
+from pathlib import Path
 
-CONFIG_PATH = os.getenv("DB_CONFIG_PATH", "configs/db.yaml")
+db_path = Path().resolve()  # current notebook folder
+project_root = db_path.parent.parent  # Notebook/ -> project root
+CONFIG_PATH = project_root / os.getenv("DB_CONFIG_PATH", "configs/db.yaml")
 
 
 def load_db_config(path: str | None = None) -> dict:
-    path = path or CONFIG_PATH
     with open(path, "r", encoding="utf-8") as fh:
         cfg = yaml.safe_load(fh)
     db = cfg.get("database", {})
@@ -40,11 +42,39 @@ def load_db_config(path: str | None = None) -> dict:
     }
 
 
-def make_engine(echo: bool = False) -> Engine:
-    cfg = load_db_config()
-    uri = cfg["uri"]
+def make_engine(cfg: dict | None = None, echo: bool = False) -> Engine:
+    """
+    Create a SQLAlchemy engine.
+
+    Parameters
+    ----------
+    cfg : dict | None
+        Optional database configuration dictionary. If None, load_db_config()
+        is called to resolve DB settings (including env overrides).
+    echo : bool
+        If True, SQLAlchemy will log SQL statements.
+
+    Returns
+    -------
+    Engine
+        A configured SQLAlchemy engine instance.
+    """
+    # Allow caller to supply config
+    cfg = cfg or load_db_config()
+
+    uri = cfg.get("uri")
+    if not uri:
+        raise ValueError("Database config missing 'uri' field.")
+
     try:
-        engine = create_engine(uri, pool_size=5, max_overflow=10, echo=echo)
+        engine = create_engine(
+            uri,
+            pool_size=cfg.get("pool_size", 5),
+            max_overflow=cfg.get("max_overflow", 10),
+            pool_timeout=cfg.get("pool_timeout", 30),
+            pool_recycle=cfg.get("pool_recycle", 1800),
+            echo=echo or cfg.get("echo_sql", False),
+        )
         return engine
     except SQLAlchemyError as e:
         raise RuntimeError(f"Failed to create DB engine: {e}") from e
