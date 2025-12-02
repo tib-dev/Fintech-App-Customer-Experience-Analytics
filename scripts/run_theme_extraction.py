@@ -1,67 +1,127 @@
-#!/usr/bin/env python3
 """
-Run theme extraction pipeline:
- - Extract keywords using TF-IDF
- - Map keywords to themes using rule-based rules
- - Export enriched CSV
+Fintech App Reviews Analysis Pipeline
+
+Steps:
+1. Preprocess review text (clean, lowercase, remove stopwords)
+2. Extract TF-IDF keywords per bank
+3. Assign themes using rule-based patterns
+4. Annotate sentiment using DistilBERT (parallel)
+5. Aggregate sentiment metrics per bank/rating
+6. Save results as CSV
 """
 
 import logging
-import os
 import pandas as pd
+from typing import Dict, List
+from fintech_app_reviews.nlp.keywords import extract_tfidf_keywords_per_group, attach_top_keywords_to_df, preprocess_text
+from fintech_app_reviews.nlp.themes import compile_keyword_patterns, rule_assign_themes
+from fintech_app_reviews.nlp.sentiment_bert import annotate_dataframe_parallel
 
-from fintech_app_reviews.config import load_config
-from fintech_app_reviews.nlp.keywords import extract_tfidf_keywords_per_group, attach_top_keywords_to_df
-from fintech_app_reviews.nlp.themes import map_keywords_to_themes
-
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def run_theme_extraction(config_path="configs/nlp.yaml",
-                         input_csv="data/processed/reviews_with_sentiment.csv",
-                         output_csv="data/processed/reviews_with_themes.csv"):
-    cfg = load_config(config_path)
+# -------------------------
+# Theme rules
+# -------------------------
+theme_map: Dict[str, List[str]] = {
+    "Account Access": ["login", "password", "pin", "otp", "locked", "signin", "sign in", "sign-in", "face id", "biometric", "fingerprint"],
+    "Performance": ["slow", "lag", "loading", "load", "timeout", "time out", "transfer slow", "speed", "delay"],
+    "Stability/Reliability": ["crash", "crashes", "freeze", "bug", "bugs", "error", "failed", "stopped working"],
+    "UI/UX": ["ui", "interface", "design", "navigation", "layout", "ux", "confusing", "user friendly", "easy to use"],
+    "Support": ["support", "customer service", "agent", "response", "help", "contact", "call center"],
+    "Feature Request": ["fingerprint", "biometric", "transfer", "scan", "receipt", "balance", "notification", "offline"]
+}
+compiled_map = compile_keyword_patterns(theme_map)
 
-    if not os.path.exists(input_csv):
-        logger.error("Input CSV not found: %s", input_csv)
-        return
-
-    try:
-        df = pd.read_csv(input_csv)
-        logger.info("Loaded %d reviews", len(df))
-    except Exception as e:
-        logger.exception("Failed to load CSV: %s", e)
-        return
-
-    # 1) Extract keywords per bank
-    try:
-        groups = extract_tfidf_keywords_per_group(df, text_col="review_text", group_col="bank", top_n=50, ngram_range=(1,2))
-        global_keywords = []
-        for kws in groups.values():
-            global_keywords.extend(kws[:30])
-        global_keywords = list(dict.fromkeys(global_keywords))
-        df = attach_top_keywords_to_df(df, text_col="review_text", top_k=5, global_tfidf=global_keywords)
-        logger.info("Keywords extraction complete")
-    except Exception as e:
-        logger.exception("Keyword extraction failed: %s", e)
-        df["keywords"] = ""
-
-    # 2) Map keywords to themes
-    try:
-        df["themes"] = df["keywords"].fillna("").apply(lambda s: map_keywords_to_themes(s.split("|") if s else []))
-        df["themes"] = df["themes"].apply(lambda lst: "|".join(lst) if isinstance(lst,list) else "")
-        logger.info("Theme mapping complete")
-    except Exception as e:
-        logger.exception("Theme mapping failed: %s", e)
-        df["themes"] = ""
-
-    os.makedirs(os.path.dirname(output_csv), exist_ok=True)
-    try:
-        df.to_csv(output_csv, index=False)
-        logger.info("Saved themed reviews CSV: %s", output_csv)
-    except Exception as e:
-        logger.exception("Failed to save CSV: %s", e)
+# -------------------------
+# Pipeline
+# -------------------------
 
 
-if __name__ == "__main__":
-    run_theme_extraction()
+def run_pipeline(
+    df: pd.DataFrame,
+    text_col: str = "review",
+    bank_col: str = "bank",
+    top_n_keywords: int = 50
+) -> pd.DataFrame:
+    """
+    Process reviews dataframe to extract keywords, assign themes, and compute sentiment.
+
+    Args:
+        df (pd.DataFrame): Input dataframe with columns ['review','bank'].
+        text_col (str): Column name containing review text.
+        bank_col (str): Column name containing bank.
+        top_n_keywords (int): Number of TF-IDF keywords to extract per bank.
+
+    Returns:
+        pd.DataFrame: Annotated dataframe with 'txt_clean', 'keywords', 'themes', 'sentiment_label', 'sentiment_score'.
+    """
+    # -------------------------
+    # Preprocess text
+    # -------------------------
+    logger.info("Preprocessing text...")
+    df["txt_clean"] = df[text_col].apply(preprocess_text)
+
+    # -------------------------
+    # TF-IDF keywords per bank
+    # -------------------------
+    logger.info("Extracting top TF-IDF keywords per bank...")
+    top_keywords_dict = extract_tfidf_keywords_per_group(
+        df,
+        text_col="txt_clean",
+        group_col=bank_col,
+        top_n=top_n_keywords
+    )
+
+    global_tfidf = sum(top_keywords_dict.values(), [])
+    df = attach_top_keywords_to_df(
+        df,
+        text_col="txt_clean",
+        global_tfidf=global_tfidf
+    )
+
+    # -------------------------
+    # Rule-based theme assignment
+    # -------------------------
+    logger.info("Assigning themes...")
+
+    def safe_assign_themes(text: str, compiled_map=compiled_map) -> List[str]:
+        if not text or not isinstance(text, str):
+            return []
+        return rule_assign_themes(text, compiled_map)
+
+    df["themes"] = df["txt_clean"].apply(safe_assign_themes)
+
+    # -------------------------
+    # BERT sentiment
+    # -------------------------
+    logger.info("Computing sentiment using DistilBERT...")
+    df = annotate_dataframe_parallel(df, text_col="txt_clean")
+
+    logger.info("Pipeline complete")
+    return df
+
+# -------------------------
+# Aggregation helper
+# -------------------------
+
+
+def aggregate_sentiment(df: pd.DataFrame, group_cols=["bank", "rating"]) -> pd.DataFrame:
+    """
+    Aggregate mean sentiment score and counts by group (bank, rating).
+
+    Args:
+        df (pd.DataFrame): Annotated dataframe with sentiment_label and sentiment_score.
+        group_cols (list[str]): Columns to group by.
+
+    Returns:
+        pd.DataFrame: Aggregated metrics.
+    """
+    agg_df = df.groupby(group_cols).agg(
+        mean_sentiment_score=("sentiment_score", "mean"),
+        positive_count=("sentiment_label", lambda x: (x == "positive").sum()),
+        negative_count=("sentiment_label", lambda x: (x == "negative").sum()),
+        neutral_count=("sentiment_label", lambda x: (x == "neutral").sum()),
+        review_count=(df.columns[0], "count")
+    ).reset_index()
+    return agg_df
