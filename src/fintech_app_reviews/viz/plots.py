@@ -51,7 +51,7 @@ def plot_sentiment_per_bank(df: pd.DataFrame, score_col="sentiment_score", bank_
 # -----------------------------
 # Theme distribution per bank
 # -----------------------------
-def plot_theme_distribution(df: pd.DataFrame, bank_col="bank", theme_col="theme_primary", colormap="tab20"):
+def plot_theme_distribution(df: pd.DataFrame, bank_col="bank", theme_col="theme_primary", colormap="tab15"):
     """
     Plot stacked bar chart of theme counts per bank with percentage labels.
     """
