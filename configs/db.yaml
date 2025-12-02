@@ -2,11 +2,11 @@
 
 default: &default
   driver: postgresql
-  host: ${DB_HOST:localhost}
-  port: ${DB_PORT:5432}
-  database: ${DB_NAME:bank_reviews}
-  user: ${DB_USER:admin}
-  password: ${DB_PASSWORD:admin123}
+  host: ${DB_HOST}
+  port: ${DB_PORT}
+  database: ${DB_NAME}
+  user: ${DB_USER}
+  password: ${DB_PASSWORD}
   sslmode: ${DB_SSLMODE:disable}
 
   # connection pooling
@@ -37,3 +37,6 @@ testing:
   pool_size: 2
   max_overflow: 2
   echo_sql: false
+
+data:
+  csv_path: "data/processed/nlp_enriched_reviews.csv"
