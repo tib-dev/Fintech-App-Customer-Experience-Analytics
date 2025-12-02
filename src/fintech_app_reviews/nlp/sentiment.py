@@ -1,100 +1,71 @@
-import logging
 import pandas as pd
-
-try:
-    from nltk.sentiment.vader import SentimentIntensityAnalyzer
-except ImportError:
-    raise ImportError(
-        "NLTK VADER not found. Install via `pip install nltk` and run `nltk.download('vader_lexicon')`.")
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# -------------------------
-# Sentiment model init
-# -------------------------
+from transformers import pipeline
 
 
 def init_sentiment_model():
     """
-    Initialize VADER sentiment analyzer.
-    """
-    try:
-        sid = SentimentIntensityAnalyzer()
-        logger.info("VADER Sentiment Analyzer initialized")
-        return sid
-    except Exception as e:
-        logger.exception("Failed to initialize VADER: %s", e)
-        raise
+    Initialize a DistilBERT sentiment analysis pipeline.
 
-# -------------------------
-# Compute sentiment score
-# -------------------------
+    Returns:
+        transformers.Pipeline: Sentiment analysis pipeline.
+    """
+    return pipeline("sentiment-analysis",
+                    model="distilbert-base-uncased-finetuned-sst-2-english")
 
 
 def get_sentiment_score(text: str, model) -> dict:
     """
-    Returns sentiment label and score for a single text using VADER.
+    Compute sentiment label and score using BERT.
+
+    Args:
+        text (str): Input text.
+        model: Transformers sentiment pipeline.
+
+    Returns:
+        dict: {'label': 'positive'|'negative'|'neutral', 'score': float}
     """
-    try:
-        if not text or not isinstance(text, str):
-            return {"label": "neutral", "score": 0.0}
-        comp = model.polarity_scores(text)
-        score = comp["compound"]
-        if score >= 0.05:
-            label = "positive"
-        elif score <= -0.05:
-            label = "negative"
-        else:
-            label = "neutral"
-        return {"label": label, "score": score}
-    except Exception as e:
-        logger.exception("Error computing sentiment for text: %s", e)
+    if not text:
         return {"label": "neutral", "score": 0.0}
+    result = model(text[:512])[0]
+    label = result["label"].lower()
+    score = float(result["score"])
+    return {"label": label, "score": score if label == "positive" else -score}
 
-# -------------------------
-# Annotate dataframe
-# -------------------------
 
-
-def annotate_dataframe(df: pd.DataFrame, text_col: str = "review_text"):
+def annotate_dataframe(df: pd.DataFrame, text_col: str = "txt_clean") -> pd.DataFrame:
     """
-    Annotate dataframe with VADER sentiment_label and sentiment_score columns.
+    Annotate DataFrame with sentiment_label and sentiment_score columns.
+
+    Args:
+        df (pd.DataFrame): Input DataFrame.
+        text_col (str): Column containing text to analyze.
+
+    Returns:
+        pd.DataFrame: Annotated DataFrame.
     """
     model = init_sentiment_model()
-    sentiment_labels = []
-    sentiment_scores = []
-
-    for idx, text in enumerate(df[text_col].fillna("")):
-        if idx % 100 == 0:
-            logger.info("Processing row %d/%d", idx, len(df))
-        result = get_sentiment_score(text, model)
-        sentiment_labels.append(result["label"])
-        sentiment_scores.append(result["score"])
-
-    df["sentiment_label"] = sentiment_labels
-    df["sentiment_score"] = sentiment_scores
+    results = df[text_col].fillna("").apply(
+        lambda t: get_sentiment_score(t, model))
+    df["sentiment_label"] = results.apply(lambda x: x["label"])
+    df["sentiment_score"] = results.apply(lambda x: x["score"])
     return df
 
-# -------------------------
-# Aggregate sentiment
-# -------------------------
 
+def aggregate_sentiment(df: pd.DataFrame, group_cols=["bank", "rating"]) -> pd.DataFrame:
+    """
+    Aggregate mean sentiment and counts by group.
 
-def aggregate_sentiment(df: pd.DataFrame, group_cols=["bank", "rating"]):
+    Args:
+        df (pd.DataFrame): Annotated DataFrame.
+        group_cols (list): Columns to group by.
+
+    Returns:
+        pd.DataFrame: Aggregated sentiment statistics.
     """
-    Aggregate mean sentiment scores and counts by bank/rating.
-    """
-    try:
-        agg_df = df.groupby(group_cols).agg(
-            mean_sentiment_score=("sentiment_score", "mean"),
-            positive_count=("sentiment_label",
-                            lambda x: (x == "positive").sum()),
-            negative_count=("sentiment_label",
-                            lambda x: (x == "negative").sum()),
-            neutral_count=("sentiment_label", lambda x: (x == "neutral").sum())
-        ).reset_index()
-        return agg_df
-    except Exception as e:
-        logger.exception("Aggregation failed: %s", e)
-        return pd.DataFrame()
+    agg_df = df.groupby(group_cols).agg(
+        mean_sentiment_score=("sentiment_score", "mean"),
+        positive_count=("sentiment_label", lambda x: (x == "positive").sum()),
+        negative_count=("sentiment_label", lambda x: (x == "negative").sum()),
+        neutral_count=("sentiment_label", lambda x: (x == "neutral").sum())
+    ).reset_index()
+    return agg_df
