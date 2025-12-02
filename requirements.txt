@@ -26,6 +26,7 @@ matplotlib
 seaborn
 plotly
 reportlab   
+wordcloud
 
 # Utilities
 python-dotenv
