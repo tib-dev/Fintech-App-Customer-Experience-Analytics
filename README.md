@@ -147,6 +147,8 @@ Fintech-App-Review-Analytics/
 
 ## Architecture
 
+```text
+
 +-------------------------+
 |  Google Play / Source   |
 |  (Raw Reviews)          |
@@ -219,7 +221,7 @@ Fintech-App-Review-Analytics/
 +-------------------------+
 |  Reports / Visuals / Insights
 +-------------------------+
-
+```
 
 
 
