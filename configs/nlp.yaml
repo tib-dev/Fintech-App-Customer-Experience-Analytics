@@ -1,94 +1,125 @@
 # =========================================
 # NLP Pipeline Configuration
-# Fintech Review Analytics - Task 2
+# Fintech Review Analytics
 # =========================================
 
 nlp:
-  # Language settings
   language: "en"
   detect_language: true
 
-  # Text normalization
-  clean_text: true
-  steps:
-    - "lowercase"
-    - "remove_urls"
-    - "remove_html"
-    - "remove_emojis"
-    - "remove_special_chars"
-    - "normalize_whitespace"
+  text_cleaning:
+    enabled: true
+    steps:
+      - lowercase
+      - remove_urls
+      - remove_html
+      - remove_emojis
+      - remove_special_chars
+      - normalize_whitespace
 
-  # Stopwords
   stopwords:
     enabled: true
-    custom: []             # Add project-specific stopwords if needed
+    custom: [] # Add project-specific stopwords if needed
 
-  # Lemmatization / Stemming
-  lemmatize: true
-  stem: false              # Enable only if doing keyword clustering
-
-  # Sentence splitting (for transformer sentiment or contextual keyword extraction)
-  sentence_tokenize: true
-
+  lemmatization: true
+  stemming: false # Enable only if doing keyword clustering
+  sentence_tokenize: true # Useful for transformer models
 
 # -----------------------------------------
 # SENTIMENT ANALYSIS
 # -----------------------------------------
 sentiment:
   enabled: true
-  engine: "vader"           # | transformer
-  transformer_model: "distilbert-base-uncased-finetuned-sst-2-english" # recommended for reviews
-  batch_size: 16                  # For transformer inference
-  device: "cpu"                   # "cuda" if GPU available
-  rolling_window: 3               # Optional smoothing for noisy reviews
-  aggregate_by: ["bank", "rating"] # For summarization
-
+  engine: "vader" # Options: vader | transformer
+  transformer:
+    model: "distilbert-base-uncased-finetuned-sst-2-english"
+    batch_size: 16
+    device: "cpu" # "cuda" if GPU available
+  rolling_window: 3 # Optional smoothing
+  aggregate_by: ["bank", "rating"] # Summarization keys
 
 # -----------------------------------------
 # KEYWORD EXTRACTION
 # -----------------------------------------
 keywords:
   enabled: true
-  method: "tfidf"                 # Options: tfidf | rake | yake | keybert
+  method: "tfidf" # Options: tfidf | rake | yake | keybert
   tfidf:
-    top_n: 50                     # Number of keywords per group (e.g., per bank)
-    ngram_range: [1,2]            # Unigrams + bigrams
-    min_df: 2                     # Ignore very rare terms
-    max_df: 0.9                   
-
+    top_n: 50 # Keywords per group (bank)
+    ngram_range: [1, 2] # Unigrams + bigrams
+    min_df: 2 # Ignore rare terms
+    max_df: 0.9 # Ignore overly frequent terms
   rake:
     min_len: 1
     max_len: 4
-
   yake:
     max_ngram_size: 3
     deduplication_threshold: 0.1
     top_k: 15
-
   keybert:
     model: "all-mpnet-base-v2"
     top_k: 10
     use_mmr: true
-
 
 # -----------------------------------------
 # THEME EXTRACTION
 # -----------------------------------------
 themes:
   enabled: true
-  method: "manual"               # Options: manual | lda | kmeans | nmf | hdbscan
-  # For manual rule-based clustering (recommended for fintech reviews)
+  method: "manual" # Options: manual | lda | kmeans | nmf | hdbscan
   rules:
-    - name: "Account Access Issues"
-      keywords: ["login", "password", "otp", "pin", "access"]
+    - name: "Account Access"
+      keywords:
+        [
+          "login",
+          "password",
+          "otp",
+          "pin",
+          "access",
+          "signin",
+          "face id",
+          "biometric",
+          "fingerprint",
+        ]
     - name: "Transaction Performance"
-      keywords: ["slow", "transfer", "payment", "processing", "timeout", "failed"]
-    - name: "User Interface & Experience"
-      keywords: ["ui", "layout", "design", "navigation", "experience", "ux"]
+      keywords:
+        [
+          "slow",
+          "transfer",
+          "payment",
+          "processing",
+          "timeout",
+          "failed",
+          "delay",
+          "lag",
+        ]
+    - name: "User Interface / UX"
+      keywords:
+        [
+          "ui",
+          "layout",
+          "design",
+          "navigation",
+          "experience",
+          "ux",
+          "confusing",
+          "easy to use",
+        ]
     - name: "Customer Support"
-      keywords: ["support", "help", "call", "service", "response"]
+      keywords:
+        ["support", "help", "call", "service", "response", "agent", "contact"]
     - name: "Feature Requests"
-      keywords: ["feature", "add", "improve", "fingerprint", "budget", "notification"]
+      keywords:
+        [
+          "feature",
+          "add",
+          "improve",
+          "notification",
+          "offline",
+          "receipt",
+          "balance",
+          "scan",
+        ]
 
   lda:
     num_topics: 8
@@ -104,7 +135,6 @@ themes:
   hdbscan:
     min_cluster_size: 20
 
-
 # -----------------------------------------
 # OUTPUT SETTINGS
 # -----------------------------------------
@@ -116,5 +146,5 @@ output:
 
   clean_text_path: "data/interim/cleaned_reviews.csv"
   enriched_output_path: "data/processed/nlp_enriched_reviews.csv"
-  sentiment_path: "../data/processed/reviews_with_sentiment.csv"
+  sentiment_path: "data/processed/reviews_with_sentiment.csv"
   themes_path: "data/processed/reviews_with_themes.csv"
