@@ -1,8 +1,36 @@
+"""
+keywords.py
+
+TF-IDF keyword extraction and per-row keyword annotation.
+
+Improvements:
+- Handles missing or empty text safely.
+- Optional lemmatization for better keyword matching.
+- Safer regex compilation for keyword search.
+- Logging for empty or failed groups.
+- Clear docstrings and typing.
+"""
+
+import re
+import logging
+from typing import List, Dict, Sequence, Tuple
+
 import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
-import re
-from typing import List, Dict, Sequence
+
+# Optional NLP: Lemmatization
+try:
+    import nltk
+    from nltk.stem import WordNetLemmatizer
+    nltk.download("wordnet", quiet=True)
+    nltk.download("omw-1.4", quiet=True)
+    LEMMATIZER = WordNetLemmatizer()
+except Exception:
+    LEMMATIZER = None
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 
 def extract_tfidf_keywords_per_group(
@@ -13,41 +41,49 @@ def extract_tfidf_keywords_per_group(
     ngram_range: tuple[int, int] = (1, 2),
     min_df: int = 2,
     max_features: int = 5000
-) -> Dict[str, List[str]]:
+) -> Dict[str, list[str]]:
     """
-    Compute top TF-IDF keywords per group.
+    Compute top TF-IDF keywords per group (e.g., per bank).
 
     Args:
-        df (pd.DataFrame): Input DataFrame containing text and group columns.
+        df (pd.DataFrame): DataFrame with text and group columns.
         text_col (str): Column containing text for TF-IDF.
-        group_col (str): Column to group by (e.g., bank).
-        top_n (int): Top N keywords per group.
+        group_col (str): Column to group by.
+        top_n (int): Top N keywords to return per group.
         ngram_range (tuple[int,int]): Min and max ngram sizes.
         min_df (int): Minimum document frequency.
-        max_features (int): Maximum features for TF-IDF.
+        max_features (int): Max features for TF-IDF.
 
     Returns:
-        Dict[str, List[str]]: Mapping from group -> top keywords list.
+        dict: Mapping from group -> list of top keywords.
     """
     groups = {}
     for group, gdf in df.groupby(group_col):
         docs = gdf[text_col].fillna("").astype(str).tolist()
         if not docs:
+            logger.warning("No documents for group '%s'", group)
             groups[group] = []
             continue
+
         min_df_here = min_df if len(docs) >= min_df else 1
-        vect = TfidfVectorizer(ngram_range=ngram_range,
-                               min_df=min_df_here,
-                               max_features=max_features)
+        vect = TfidfVectorizer(
+            ngram_range=ngram_range,
+            min_df=min_df if len(docs) >= min_df else 1,
+            max_features=max_features
+        )
+
         try:
             X = vect.fit_transform(docs)
-        except ValueError:
+        except ValueError as e:
+            logger.warning("TF-IDF failed for group '%s': %s", group, e)
             groups[group] = []
             continue
+
         features = np.array(vect.get_feature_names_out())
         mean_tfidf = np.asarray(X.mean(axis=0)).ravel()
         idx = mean_tfidf.argsort()[::-1][:top_n]
         groups[group] = features[idx].tolist()
+
     return groups
 
 
@@ -59,56 +95,49 @@ def attach_top_keywords_to_df(
     separator: str = "|"
 ) -> pd.DataFrame:
     """
-    Attach top keywords from global TF-IDF list to each row of DataFrame.
+    Annotate each row with top keywords found in text.
 
     Args:
-        df (pd.DataFrame): Input DataFrame.
-        text_col (str): Column to scan for keywords.
-        global_tfidf (Sequence[str]|None): List of candidate keywords.
-        top_k (int): Maximum keywords per review.
+        df (pd.DataFrame): DataFrame containing text.
+        text_col (str): Column containing text to scan.
+        global_tfidf (Sequence[str] | None): Candidate keywords from TF-IDF.
+        top_k (int): Max keywords per row.
         separator (str): Separator for multiple keywords.
 
     Returns:
-        pd.DataFrame: Copy of DataFrame with 'keywords' column.
+        pd.DataFrame: Copy of DataFrame with 'keywords' column added.
     """
     out = df.copy()
     if global_tfidf is None:
         out["keywords"] = ""
         return out
 
+    # Optional: sort longer ngrams first for matching
     candidates = sorted(global_tfidf, key=lambda t: (-(" " in t), len(t)))
-    cand_patterns = [(t, re.compile(rf"\b{re.escape(t)}\b", flags=re.IGNORECASE))
-                     for t in candidates]
+    cand_patterns: List[Tuple[str, re.Pattern]] = []
+    for t in candidates:
+        try:
+            cand_patterns.append((t, re.compile(rf"\b{re.escape(t)}\b", flags=re.IGNORECASE)))
+        except re.error as e:
+            logger.warning("Invalid regex for keyword '%s': %s", t, e)
 
     def _find_keywords(text: str) -> str:
-        if not isinstance(text, str):
+        if not isinstance(text, str) or not text.strip():
             return ""
-        text = text.lower()
+        # Optional: lemmatize
+        if LEMMATIZER:
+            text_tokens = [LEMMATIZER.lemmatize(w) for w in text.lower().split()]
+            text_proc = " ".join(text_tokens)
+        else:
+            text_proc = text.lower()
+
         found = []
         for term, pat in cand_patterns:
-            if pat.search(text):
+            if pat.search(text_proc):
                 found.append(term)
             if len(found) >= top_k:
                 break
         return separator.join(found)
 
-    out["keywords"] = out[text_col].fillna(
-        "").astype(str).apply(_find_keywords)
+    out["keywords"] = out[text_col].fillna("").astype(str).apply(_find_keywords)
     return out
-# Stopwords (expandable)
-STOPWORDS = {
-    "the", "and", "a", "an", "is", "it", "this", "that", "to",
-    "for", "in", "on", "of", "with", "at", "as", "our", "be"
-}
-
-
-def preprocess_text(text: str) -> str:
-    """Clean text: lowercase, remove URLs, non-alphanumeric, stopwords."""
-    if not isinstance(text, str):
-        return ""
-    text = text.lower()
-    text = re.sub(r"http\S+", " ", text)
-    text = re.sub(r"[\r\n\t]+", " ", text)
-    text = re.sub(r"[^a-z0-9\s]", " ", text)
-    tokens = [w for w in text.split() if w not in STOPWORDS and len(w) > 2]
-    return " ".join(tokens)
