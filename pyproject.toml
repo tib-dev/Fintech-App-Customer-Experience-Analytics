@@ -13,8 +13,8 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
 
+# runtime dependencies (keep some minimal version constraints)
 dependencies = [
-    # Core
     "numpy",
     "pandas",
     "pyyaml",
@@ -24,29 +24,57 @@ dependencies = [
     "google-play-scraper",
 
     # Database
-    "sqlalchemy",
+    "sqlalchemy,
     "psycopg2-binary",
     "alembic",
 
     # NLP / Sentiment
     "nltk",
-    "spacy",
-    "transformers",
+    "spacy,
+    "transformers,
+    "torch",                      # transformers needs torch or other backend
+
+    # Classic ML + text
+    "scikit-learn",
+    "vaderSentiment",
+    "langdetect",
 
     # Visualization / reporting
     "matplotlib",
     "seaborn",
     "plotly",
     "reportlab",
+    "wordcloud",                  # C-extension: needs system build deps (see notes)
 
     # Utilities
     "python-dotenv",
-    # Language detetection
-    "langdetect"
+    "tqdm"
+]
+
+# Optional / extras (dev tools)
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "black",
+    "isort",
+    "flake8",
+    "pre-commit",
+    "mypy",
+    "codecov"
+]
+fast = [
+    "rapidfuzz"   # optional fuzzy matching for themes/keywords
 ]
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+# Optionally add console scripts for common CLI entrypoints
+[project.scripts]
+run-theme-extraction = "fintech_app_reviews.scripts.run_theme_extraction:main"
+load-to-postgres = "fintech_app_reviews.scripts.load_to_postgres:main"
+run-sentiment = "fintech_app_reviews.scripts.run_sentiment:run_cli"
 
 [tool.black]
 line-length = 88
@@ -58,7 +86,7 @@ line_length = 88
 src_paths = ["src"]
 
 [tool.mypy]
-python_version = "3.14"
+python_version = "3.10"
 ignore_missing_imports = true
 no_implicit_optional = true
 
@@ -66,3 +94,7 @@ no_implicit_optional = true
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 addopts = "--cov=src --cov-report=term-missing"
+
+[project.urls]
+"Homepage" = "https://example.com/Fintech_App_Reviews"
+"Repository" = "https://github.com/your-org/Fintech-App-Review-Analytics"
