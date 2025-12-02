@@ -1,4 +1,5 @@
 
+import re
 import logging
 import pandas as pd
 import numpy as np
@@ -24,9 +25,9 @@ def clean_reviews(df: pd.DataFrame) -> pd.DataFrame:
         # 0. Standardize Column Names: Map common scraper output names to final required names.
         # This handles cases where raw data uses 'content' or 'score'
         rename_map = {
-          'review_text': 'review',  # <- match your scraper output
-          'score': 'rating',        # already optional fallback
-         }
+            'review_text': 'review',  # <- match your scraper output
+            'score': 'rating',        # already optional fallback
+        }
         df.rename(columns=rename_map, inplace=True)
 
         # Ensure the required columns for filtering are present. If not, cleaning can't proceed.
@@ -67,3 +68,5 @@ def clean_reviews(df: pd.DataFrame) -> pd.DataFrame:
     except Exception as e:
         logger.error(f"Cleaner failed: {e}", exc_info=True)
         return pd.DataFrame()
+
+

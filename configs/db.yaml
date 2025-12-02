@@ -1,71 +1,39 @@
-# =========================================
-# PostgreSQL + Storage Configuration
-# Fintech Review Analytics
-# =========================================
+# PostgreSQL configuration (env-first)
 
-postgres:
-  host: "localhost"
-  port: 5432
-  database: "fintech_reviews"
-  user: "postgres"
-  password: "postgres"
-  schema: "public"
+default: &default
+  driver: postgresql
+  host: ${DB_HOST:localhost}
+  port: ${DB_PORT:5432}
+  database: ${DB_NAME:bank_reviews}
+  user: ${DB_USER:admin}
+  password: ${DB_PASSWORD:admin123}
+  sslmode: ${DB_SSLMODE:disable}
 
-  # Connection pool
-  pool_min: 5
-  pool_max: 20
-  connection_timeout: 5
+  # connection pooling
+  pool_size: ${DB_POOL_SIZE:5}
+  max_overflow: ${DB_MAX_OVERFLOW:10}
+  pool_timeout: ${DB_POOL_TIMEOUT:30}
+  pool_recycle: ${DB_POOL_RECYCLE:1800}
+  echo_sql: ${DB_ECHO_SQL:false}
 
+development:
+  <<: *default
 
-# -----------------------------------------
-# TABLE CONFIGURATION
-# -----------------------------------------
-tables:
-  reviews: "reviews"
-  sentiments: "sentiment_scores"
-  keywords: "keywords"
-  themes: "themes"
-  load_logs: "etl_logs"
+production:
+  <<: *default
+  sslmode: ${DB_SSLMODE:require}
+  pool_size: ${DB_POOL_SIZE:10}
+  max_overflow: ${DB_MAX_OVERFLOW:20}
+  echo_sql: ${DB_ECHO_SQL:false}
 
-  # Required columns for validation
-  review_required_fields:
-    - "review_id"
-    - "user_name"
-    - "rating"
-    - "timestamp"
-    - "review_text"
-
-  sentiment_required_fields:
-    - "review_id"
-    - "sentiment_score"
-
-
-# -----------------------------------------
-# IMPORT SETTINGS
-# -----------------------------------------
-import:
-  chunk_size: 5000
-  upsert: true
-  conflict_key: "review_id"
-
-  # CSV export/import for fast loads
-  temp_export_path: "data/postgres_exports"
-
-
-# -----------------------------------------
-# ERROR HANDLING / RETRY
-# -----------------------------------------
-error_handling:
-  retries: 3
-  retry_backoff_sec: 2
-  log_failed_rows: true
-  failed_rows_path: "data/interim/failed_rows.csv"
-
-
-# -----------------------------------------
-# LOGGING
-# -----------------------------------------
-logging:
-  level: "INFO"
-  log_to_file: true
-  logfile: "logs/db_loader.log"
+testing:
+  <<: *default
+  host: ${TEST_DB_HOST:localhost}
+  port: ${TEST_DB_PORT:5432}
+  database: ${TEST_DB_NAME:bank_reviews_test}
+  user: ${TEST_DB_USER:postgres}
+  password: ${TEST_DB_PASSWORD:postgres}
+  sslmode: ${TEST_DB_SSLMODE:disable}
+  pool_size: 2
+  max_overflow: 2
+  echo_sql: false
