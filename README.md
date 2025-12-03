@@ -85,6 +85,9 @@ Fintech-App-Review-Analytics/
 ├── notebooks/
 │   ├── exploration/
 │   └── analysis/
+├── reports/
+│   ├── insight_report.md/
+│   └── executive_summary.md/
 ├── scripts/
 │   ├── __init__.py
 │   ├── scrape_reviews.py
@@ -103,6 +106,9 @@ Fintech-App-Review-Analytics/
 │   │   ├── __init__.py
 │   │   ├── cleaner.py
 │   │   └── date_normalizer.py
+│   ├── reports/
+│   │   ├── __init__.py
+│   │   ├── generate_report.py
 │   ├── nlp/
 │   │   ├── __init__.py
 │   │   ├── sentiment.py
