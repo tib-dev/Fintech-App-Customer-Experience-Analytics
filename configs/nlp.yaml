@@ -19,43 +19,49 @@ nlp:
 
   stopwords:
     enabled: true
-    custom: [] # Add project-specific stopwords if needed
+    custom: []
 
   lemmatization: true
-  stemming: false # Enable only if doing keyword clustering
-  sentence_tokenize: true # Useful for transformer models
+  stemming: false
+  sentence_tokenize: true
 
 # -----------------------------------------
 # SENTIMENT ANALYSIS
 # -----------------------------------------
 sentiment:
   enabled: true
-  engine: "vader" # Options: vader | transformer
+  engine: "vader" # vader | transformer
+
   transformer:
     model: "distilbert-base-uncased-finetuned-sst-2-english"
     batch_size: 16
-    device: "cpu" # "cuda" if GPU available
-  rolling_window: 3 # Optional smoothing
-  aggregate_by: ["bank", "rating"] # Summarization keys
+    device: "cpu"
+
+  rolling_window: 3
+  aggregate_by: ["bank", "rating"]
 
 # -----------------------------------------
 # KEYWORD EXTRACTION
 # -----------------------------------------
 keywords:
   enabled: true
-  method: "tfidf" # Options: tfidf | rake | yake | keybert
+  method: "tfidf"
+
   tfidf:
-    top_n: 50 # Keywords per group (bank)
-    ngram_range: [1, 2] # Unigrams + bigrams
-    min_df: 2 # Ignore rare terms
-    max_df: 0.9 # Ignore overly frequent terms
+    top_n: 50
+    ngram_range: [1, 2]
+    min_df: 2
+    max_df: 0.9
+
   rake:
     min_len: 1
     max_len: 4
+
   yake:
     max_ngram_size: 3
     deduplication_threshold: 0.1
     top_k: 15
+
   keybert:
     model: "all-mpnet-base-v2"
     top_k: 10
@@ -66,21 +72,30 @@ keywords:
 # -----------------------------------------
 themes:
   enabled: true
-  method: "manual" # Options: manual | lda | kmeans | nmf | hdbscan
+  method: "manual"
+
   rules:
     - name: "Account Access"
       keywords:
         [
           "login",
+          "log in",
           "password",
           "otp",
           "pin",
           "access",
           "signin",
+          "sign in",
+          "verification",
+          "verify",
+          "blocked",
+          "locked",
+          "session expired",
           "face id",
           "biometric",
           "fingerprint",
         ]
+
     - name: "Transaction Performance"
       keywords:
         [
@@ -90,9 +105,18 @@ themes:
           "processing",
           "timeout",
           "failed",
+          "fail",
           "delay",
           "lag",
+          "loading",
+          "crash",
+          "bug",
+          "error",
+          "not working",
+          "freeze",
+          "stuck",
         ]
+
     - name: "User Interface / UX"
       keywords:
         [
@@ -104,10 +128,28 @@ themes:
           "ux",
           "confusing",
           "easy to use",
+          "theme",
+          "color",
+          "button",
+          "menu",
+          "text",
+          "responsive",
         ]
+
     - name: "Customer Support"
       keywords:
-        ["support", "help", "call", "service", "response", "agent", "contact"]
+        [
+          "support",
+          "help",
+          "call",
+          "service",
+          "response",
+          "agent",
+          "contact",
+          "unhelpful",
+          "rude",
+        ]
+
     - name: "Feature Requests"
       keywords:
         [
@@ -118,7 +160,14 @@ themes:
           "offline",
           "receipt",
           "balance",
+          "statement",
+          "download",
+          "dark mode",
+          "qr",
           "scan",
+          "new version",
+          "update",
+          "custom alert",
         ]
 
   lda:
