@@ -149,3 +149,4 @@ output:
   sentiment_path: "data/processed/reviews_with_sentiment.csv"
   themes_path: "data/processed/reviews_with_themes.csv"
   themes_per_bank_dir: "data/processed/per_bank/"
+  reports_path: "reports/"
