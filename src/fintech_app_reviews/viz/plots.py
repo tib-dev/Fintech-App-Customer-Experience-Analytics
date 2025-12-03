@@ -51,7 +51,7 @@ def plot_sentiment_per_bank(df: pd.DataFrame, score_col="sentiment_score", bank_
 # -----------------------------
 # Theme distribution per bank
 # -----------------------------
-def plot_theme_distribution(df: pd.DataFrame, bank_col="bank", theme_col="theme_primary", colormap="tab15"):
+def plot_theme_distribution(df: pd.DataFrame, bank_col="bank", theme_col="theme_primary", colormap="tab20"):
     """
     Plot stacked bar chart of theme counts per bank with percentage labels.
     """
@@ -90,3 +90,60 @@ def plot_theme_distribution(df: pd.DataFrame, bank_col="bank", theme_col="theme_
     plt.xticks(rotation=0)
     plt.tight_layout()
     plt.show()
+
+
+def plot_monthly_sentiment(
+    df: pd.DataFrame,
+    date_col: str = "date",
+    bank_col: str = "bank",
+    sentiment_col: str = "sentiment_score",
+):
+    """
+    Create a monthly sentiment trend line plot per bank.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Must contain bank, date, and sentiment columns.
+    date_col : str
+        Name of the date column.
+    bank_col : str
+        Name of the bank column.
+    sentiment_col : str
+        Name of the sentiment score column.
+    output_path : str
+        Where to save the plot.
+    """
+
+    # Ensure date is datetime
+    df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
+
+    # Drop invalid dates
+    df = df.dropna(subset=[date_col])
+
+    # Create month column
+    df["month"] = df[date_col].dt.to_period("M").dt.to_timestamp()
+
+    # Aggregate: monthly average sentiment per bank
+    monthly = (
+        df.groupby([bank_col, "month"])[sentiment_col]
+        .mean()
+        .reset_index()
+        .sort_values("month")
+    )
+
+    # Plot
+    plt.figure(figsize=(12, 6))
+
+    banks = monthly[bank_col].unique()
+    for bank in banks:
+        subset = monthly[monthly[bank_col] == bank]
+        plt.plot(subset["month"], subset[sentiment_col],
+                 marker="o", label=bank)
+
+    plt.title("Monthly Sentiment Trend per Bank")
+    plt.xlabel("Month")
+    plt.ylabel("Average Sentiment Score")
+    plt.grid(True, linestyle="--", alpha=0.5)
+    plt.legend(title="Bank")
+    plt.tight_layout()
