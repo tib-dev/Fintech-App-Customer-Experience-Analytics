@@ -10,6 +10,7 @@ Analyze user reviews of mobile banking apps for three Ethiopian banks (CBE, BOA,
 - [Business Objective](#business-objective)
 - [Dataset Overview](#dataset-overview)
 - [Folder Structure](#folder-structure)
+- [Architecture](#architecture)
 - [Setup & Installation](#setup--installation)
 - [Tasks Completed](#tasks-completed)
 - [Technologies Used](#technologies-used)
@@ -84,6 +85,9 @@ Fintech-App-Review-Analytics/
 ├── notebooks/
 │   ├── exploration/
 │   └── analysis/
+├── reports/
+│   ├── insight_report.md/
+│   └── executive_summary.md/
 ├── scripts/
 │   ├── __init__.py
 │   ├── scrape_reviews.py
@@ -102,6 +106,9 @@ Fintech-App-Review-Analytics/
 │   │   ├── __init__.py
 │   │   ├── cleaner.py
 │   │   └── date_normalizer.py
+│   ├── reports/
+│   │   ├── __init__.py
+│   │   ├── generate_report.py
 │   ├── nlp/
 │   │   ├── __init__.py
 │   │   ├── sentiment.py
@@ -139,8 +146,90 @@ Fintech-App-Review-Analytics/
 ├── requirements-dev.txt
 ├── pyproject.toml
 ├── README.md
+├── .env
 └── .gitignore
 ```
+
+
+## Architecture
+
+```text
+
++-------------------------+
+|  Google Play / Source   |
+|  (Raw Reviews)          |
++-----------+-------------+
+            |
+            v
++-------------------------+
+|  scripts/scrape_reviews.py  <-- CLI script to download reviews
++-------------------------+
+            |
+            v
++-------------------------+
+|  data/raw/*.csv         |
+|  Raw reviews stored     |
++-------------------------+
+            |
+            v
++-------------------------+
+|  scripts/clean_reviews.py  <-- cleans text, handles missing data
+|  src/fintech_app_reviews/preprocessing/*   <-- modules
++-------------------------+
+            |
+            v
++-------------------------+
+|  data/processed/*.csv    |
+|  Cleaned reviews         |
++-------------------------+
+            |
+            v
++-------------------------+
+|  scripts/run_sentiment.py  <-- runs sentiment analysis
+|  src/fintech_app_reviews/nlp/sentiment.py
++-------------------------+
+            |
+            v
++-------------------------+
+|  data/processed/reviews_with_sentiment.csv
++-------------------------+
+            |
+            v
++-------------------------+
+|  scripts/run_theme_extraction.py  <-- TF-IDF + rule-based themes
+|  src/fintech_app_reviews/nlp/keywords.py
+|  src/fintech_app_reviews/nlp/themes.py
++-------------------------+
+            |
+            v
++-------------------------+
+|  data/processed/reviews_with_themes.csv
++-------------------------+
+            |
+            v
++-------------------------+
+|  scripts/load_to_postgres.py  <-- loads to DB
+|  src/fintech_app_reviews/db/loader.py
++-------------------------+
+            |
+            v
++-------------------------+
+|  PostgreSQL: bank_reviews database
++-------------------------+
+            |
+            v
++-------------------------+
+|  scripts/generate_report.py  <-- plots, KPIs, summary
+|  src/fintech_app_reviews/viz/*.py
++-------------------------+
+            |
+            v
++-------------------------+
+|  Reports / Visuals / Insights
++-------------------------+
+```
+
+
 
 ## Setup & Installation
 
